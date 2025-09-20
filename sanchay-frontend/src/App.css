@@ -1,0 +1,26 @@
+/* For WebKit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 0.8rem;
+  height: 0.8rem;
+}
+
+::-webkit-scrollbar-track {
+  background-color: #02141d;
+  border-radius: 2rem;
+}
+
+::-webkit-scrollbar-thumb {
+  border-radius: 2rem;
+  background: linear-gradient(45deg, #ff6bcb, #63b3ed);
+  border: 2px solid #02141d;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(45deg, #ff8ad4, #7bc1f5);
+}
+
+/* For Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #ff6bcb #02141d;
+}
