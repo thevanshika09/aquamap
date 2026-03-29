@@ -199,7 +199,7 @@ const HeroSection = () => {
           transition={{ duration: 0.6, delay: 0.38 }}
           className="flex flex-col sm:flex-row gap-4 mb-20"
         >
-          <Link to="/signup">
+          <Link to="/Dashboard">
             <motion.button
               whileHover={{ scale: 1.04, boxShadow: "0 0 30px rgba(6,182,212,0.45)" }}
               whileTap={{ scale: 0.96 }}
