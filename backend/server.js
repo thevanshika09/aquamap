@@ -6,16 +6,20 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import path from 'path';
 
-
-
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5001;
+
+// Fix __dirname for ES modules
 const __dirname = path.resolve();
 
 // ✅ Middleware
-app.use(cors({ origin: "http://localhost:5173", credentials: true }));
+app.use(cors({
+    origin: true, // allow all (fix for production)
+    credentials: true
+}));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cookieParser());
@@ -23,18 +27,24 @@ app.use(cookieParser());
 // ✅ Routes
 app.use('/api/auth', authRoutes);
 
+// ✅ Test route (optional but useful)
+app.get("/api/test", (req, res) => {
+    res.send("API working ✅");
+});
 
-
-// ✅ Serve frontend in production
+// ✅ Serve frontend (IMPORTANT FIXED PART)
 if (process.env.NODE_ENV === 'production') {
-    app.use(express.static(path.join(__dirname, '../sanchay-frontendt')));
+    const frontendPath = path.join(__dirname, '../sanchay-frontend/dist');
+
+    app.use(express.static(frontendPath));
+
     app.get('*', (req, res) => {
-        res.sendFile(path.resolve(__dirname, "sanchay-frontend",  "index.html"));
+        res.sendFile(path.join(frontendPath, 'index.html'));
     });
 }
 
 // ✅ Start server
 app.listen(PORT, () => {
+    console.log('🚀 Server running on port:', PORT);
     connectDB();
-    console.log('🚀 Server is running on port:', PORT);
 });
