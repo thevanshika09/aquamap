@@ -35,7 +35,7 @@ const frontendPath = path.join(__dirname, '../sanchay-frontend/dist');
 
 app.use(express.static(frontendPath));
 
-app.get('*', (req, res) => {
+app.get('/:path(*)', (req, res) => {
     res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
