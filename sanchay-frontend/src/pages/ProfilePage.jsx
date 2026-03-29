@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuthStore } from "../store/authStore";
 import { useNavigate } from "react-router-dom";
 import { Camera, Mail, User, Wallet, Ticket, Star, LogOut, Edit, Save, X } from "lucide-react";
-import FloatingShape from "../components/FloatingShape";
+import { motion } from "framer-motion";
 
 const ProfilePage = () => {
   const {
@@ -13,98 +13,62 @@ const ProfilePage = () => {
     updateProfile,
     isUpdatingProfile,
   } = useAuthStore();
+
   const [selectedImg, setSelectedImg] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(user?.name || "");
   const [editError, setEditError] = useState(null);
   const navigate = useNavigate();
 
- const handleImageUpload = async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  try {
-    // 1. Show loading state immediately
-    setSelectedImg(URL.createObjectURL(file)); // Temporary local preview
-
-    // 2. Compress image if needed (optional)
-    const compressedFile = await compressImage(file); // Use the compression function from earlier
-
-    // 3. Convert to Base64
-    const base64Image = await convertToBase64(compressedFile);
-
-    // 4. Update backend
-    const success = await updateProfile({ profilePic: base64Image });
-    
-    if (!success) {
-      throw new Error("Backend update failed");
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      setSelectedImg(URL.createObjectURL(file));
+      const compressedFile = await compressImage(file);
+      const base64Image = await convertToBase64(compressedFile);
+      const success = await updateProfile({ profilePic: base64Image });
+      if (!success) throw new Error("Backend update failed");
+      setSelectedImg(null);
+    } catch (error) {
+      console.error("Upload failed:", error);
+      setSelectedImg(null);
+      alert("Failed to save image. Please try again.");
     }
-
-    // 5. Only update local state if backend succeeds
-    setSelectedImg(null); // Clear temp URL
-  } catch (error) {
-    console.error("Upload failed:", error);
-    setSelectedImg(null); // Remove failed upload
-    alert("Failed to save image. Please try again.");
-  }
-};
-
-// Helper function
-const convertToBase64 = (file) => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = (error) => reject(error);
-  });
-};
-
-const compressImage = async (file) => {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target.result;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 400;
-        const MAX_HEIGHT = 400;
-        let width = img.width;
-        let height = img.height;
-
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
-          }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-
-        canvas.toBlob(
-          (blob) => resolve(new File([blob], file.name, { type: 'image/jpeg', quality: 0.7 })),
-          'image/jpeg',
-          0.7
-        );
-      };
-    };
-  });
-};
-
-  const handleEditProfile = () => {
-    setEditedName(user?.name || "");
-    setIsEditing(true);
   };
 
+  const convertToBase64 = (file) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (error) => reject(error);
+    });
+
+  const compressImage = async (file) =>
+    new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const MAX = 400;
+          let w = img.width, h = img.height;
+          if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
+          else { if (h > MAX) { w *= MAX / h; h = MAX; } }
+          canvas.width = w; canvas.height = h;
+          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+          canvas.toBlob(
+            (blob) => resolve(new File([blob], file.name, { type: "image/jpeg" })),
+            "image/jpeg", 0.7
+          );
+        };
+      };
+    });
+
+  const handleEditProfile = () => { setEditedName(user?.name || ""); setIsEditing(true); };
   const handleSaveProfile = async () => {
     try {
       setEditError(null);
@@ -114,183 +78,313 @@ const compressImage = async (file) => {
       setEditError(error.message || "Failed to update profile");
     }
   };
-
-  const handleCancelEdit = () => {
-    setIsEditing(false);
-    setEditedName(user?.name || "");
-    setEditError(null);
-  };
-
+  const handleCancelEdit = () => { setIsEditing(false); setEditedName(user?.name || ""); setEditError(null); };
   const handleLogout = async () => {
-    try {
-      await logout();
-      navigate("/dashboard");
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
+    try { await logout(); navigate("/dashboard"); }
+    catch (error) { console.error("Logout error:", error); }
   };
 
   if (!isAuthenticated || isLoading || !user) {
     return (
-      <div className="h-screen pt-32 flex items-center justify-center text-lg text-emerald-800">
+      <div
+        className="h-screen flex items-center justify-center text-base"
+        style={{ background: "linear-gradient(160deg, #040d1a 0%, #061626 50%, #071e2e 100%)", color: "#67e8f9" }}
+      >
         Loading profile...
       </div>
     );
   }
 
   return (
-    
-    
-    <div className="min-h-screen pt-5 pb-5 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-emerald-50 to-emerald-100">
-      
-      <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl p-8 space-y-10 border border-emerald-200">
-        <div className="flex justify-between items-start">
-          <div className="text-center space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight text-emerald-800">
-              Welcome, {user?.name || "User"}!
-            </h1>
-            <p className="text-emerald-600">Manage your profile, wallet and Sakhi points</p>
-          </div>
-          {!isEditing ? (
-            <button
-              onClick={handleEditProfile}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-lg transition"
-            >
-              <Edit className="w-4 h-4" />
-              Edit Profile
-            </button>
-          ) : null}
-        </div>
-
-        {/* Avatar */}
-        <div className="flex flex-col items-center">
-  <div className="relative">
-    {/* Replace the existing img tag with this one */}
-    <img
-  src={user?.profilePic || selectedImg || "/avatar.png"}
-  alt="Profile"
-  className="w-32 h-32 rounded-full object-cover border-4 border-emerald-500 shadow-lg"
-  onError={(e) => {
-    e.target.src = "/avatar.png"; // Fallback if image fails to load
-  }}
-/>
-    <label
-      htmlFor="avatar-upload"
-      className={`absolute bottom-0 right-0 bg-emerald-600 hover:bg-emerald-700 p-2 rounded-full cursor-pointer transition-all ${
-        isUpdatingProfile ? "opacity-50 pointer-events-none" : ""
-      }`}
+    <div
+      className="min-h-screen pt-20 pb-10 px-4 sm:px-6 lg:px-8 relative overflow-hidden"
+      style={{ background: "linear-gradient(160deg, #040d1a 0%, #061626 50%, #071e2e 100%)" }}
     >
-      <Camera className="w-4 h-4 text-white" />
-      <input
-        type="file"
-        id="avatar-upload"
-        className="hidden"
-        accept="image/*"
-        onChange={handleImageUpload}
-        disabled={isUpdatingProfile}
+      {/* Grid dot overlay */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: "radial-gradient(circle, rgba(56,189,248,0.06) 1px, transparent 1px)",
+          backgroundSize: "36px 36px",
+        }}
       />
-    </label>
-  </div>
-  <p className="text-sm text-emerald-600 mt-2">
-    {isUpdatingProfile ? "Uploading..." : "Click the camera to change avatar"}
-  </p>
-</div>
+      {/* Glow blobs */}
+      <div className="absolute -top-40 -left-40 w-[500px] h-[500px] rounded-full pointer-events-none"
+        style={{ background: "radial-gradient(circle, rgba(14,116,144,0.18) 0%, transparent 70%)" }} />
+      <div className="absolute -bottom-40 -right-40 w-[450px] h-[450px] rounded-full pointer-events-none"
+        style={{ background: "radial-gradient(circle, rgba(3,105,161,0.15) 0%, transparent 70%)" }} />
 
-        {/* Info */}
-        <div className="grid sm:grid-cols-2 gap-6">
-          <div>
-            <p className="text-sm text-emerald-600 flex items-center gap-2">
-              <User className="w-4 h-4" /> Full Name
-            </p>
-            {isEditing ? (
-              <div className="space-y-2">
-                <input
-                  type="text"
-                  value={editedName}
-                  onChange={(e) => setEditedName(e.target.value)}
-                  className="mt-1 w-full px-4 py-2 bg-emerald-50 rounded-lg border border-emerald-300 text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-                {editError && <p className="text-red-500 text-sm">{editError}</p>}
-              </div>
-            ) : (
-              <p className="mt-1 px-4 py-2 bg-emerald-50 rounded-lg border border-emerald-200 text-emerald-800">
-                {user?.name || "Not provided"}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="max-w-3xl mx-auto relative z-10 rounded-2xl shadow-2xl overflow-hidden"
+        style={{
+          background: "rgba(255,255,255,0.03)",
+          border: "1px solid rgba(6,182,212,0.15)",
+          backdropFilter: "blur(20px)",
+        }}
+      >
+        {/* Top accent line */}
+        <div className="h-px w-full"
+          style={{ background: "linear-gradient(90deg, transparent, rgba(6,182,212,0.6), transparent)" }} />
+
+        <div className="p-8 space-y-10">
+
+          {/* Header */}
+          <div className="flex justify-between items-start">
+            <div className="space-y-1">
+              <h1
+                className="text-3xl font-bold text-white"
+                style={{ fontFamily: "'Syne', sans-serif" }}
+              >
+                Welcome, {user?.name?.split(" ")[0] || "User"}!
+              </h1>
+              <p className="text-sm" style={{ color: "rgba(103,232,249,0.7)" }}>
+                Manage your AquaMap profile and account
               </p>
+            </div>
+            {!isEditing && (
+              <button
+                onClick={handleEditProfile}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all"
+                style={{
+                  background: "rgba(6,182,212,0.08)",
+                  border: "1px solid rgba(6,182,212,0.2)",
+                  color: "#67e8f9",
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "rgba(6,182,212,0.15)"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "rgba(6,182,212,0.08)"}
+              >
+                <Edit className="w-4 h-4" />
+                Edit Profile
+              </button>
             )}
           </div>
-          <div>
-            <p className="text-sm text-emerald-600 flex items-center gap-2">
-              <Mail className="w-4 h-4" /> Email
+
+          {/* Avatar */}
+          <div className="flex flex-col items-center">
+            <div className="relative">
+              <div
+                className="p-1 rounded-full"
+                style={{ background: "linear-gradient(135deg, #0ea5e9, #06b6d4)" }}
+              >
+                <img
+                  src={user?.profilePic || selectedImg || "/avatar.png"}
+                  alt="Profile"
+                  className="w-28 h-28 rounded-full object-cover"
+                  style={{ border: "3px solid #040d1a" }}
+                  onError={(e) => { e.target.src = "/avatar.png"; }}
+                />
+              </div>
+              <label
+                htmlFor="avatar-upload"
+                className="absolute bottom-0 right-0 p-2 rounded-full cursor-pointer transition-all"
+                style={{
+                  background: "linear-gradient(135deg, #0284c7, #06b6d4)",
+                  boxShadow: "0 0 12px rgba(6,182,212,0.4)",
+                  opacity: isUpdatingProfile ? 0.5 : 1,
+                  pointerEvents: isUpdatingProfile ? "none" : "auto",
+                }}
+              >
+                <Camera className="w-4 h-4 text-white" />
+                <input
+                  type="file"
+                  id="avatar-upload"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  disabled={isUpdatingProfile}
+                />
+              </label>
+            </div>
+            <p className="text-xs mt-3" style={{ color: "rgba(148,163,184,0.6)" }}>
+              {isUpdatingProfile ? "Uploading..." : "Click the camera to change avatar"}
             </p>
-            <p className="mt-1 px-4 py-2 bg-emerald-50 rounded-lg border border-emerald-200 text-emerald-800">
-              {user?.email}
-            </p>
           </div>
-        </div>
 
-        {isEditing && (
-          <div className="flex justify-end gap-3">
-            <button
-              onClick={handleCancelEdit}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg transition"
-            >
-              <X className="w-4 h-4" />
-              Cancel
-            </button>
-            <button
-              onClick={handleSaveProfile}
-              disabled={isUpdatingProfile}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition disabled:opacity-50"
-            >
-              <Save className="w-4 h-4" />
-              {isUpdatingProfile ? "Saving..." : "Save Changes"}
-            </button>
-          </div>
-        )}
+          {/* Info fields */}
+          <div className="grid sm:grid-cols-2 gap-6">
+            {/* Name */}
+            <div>
+              <p className="text-xs font-medium tracking-widest uppercase mb-2 flex items-center gap-2"
+                style={{ color: "rgba(103,232,249,0.6)" }}>
+                <User className="w-3.5 h-3.5" /> Full Name
+              </p>
+              {isEditing ? (
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={editedName}
+                    onChange={(e) => setEditedName(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl text-white text-sm outline-none transition-all"
+                    style={{
+                      background: "rgba(6,182,212,0.06)",
+                      border: "1px solid rgba(6,182,212,0.3)",
+                    }}
+                    onFocus={(e) => e.target.style.border = "1px solid rgba(6,182,212,0.6)"}
+                    onBlur={(e) => e.target.style.border = "1px solid rgba(6,182,212,0.3)"}
+                  />
+                  {editError && <p className="text-red-400 text-xs">{editError}</p>}
+                </div>
+              ) : (
+                <p
+                  className="px-4 py-2.5 rounded-xl text-sm text-white"
+                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(6,182,212,0.1)" }}
+                >
+                  {user?.name || "Not provided"}
+                </p>
+              )}
+            </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200 text-center shadow">
-            <Wallet className="mx-auto mb-2 w-5 h-5 text-emerald-600" />
-            <p className="text-sm text-emerald-600">Wallet</p>
-            <p className="text-xl font-bold text-emerald-800">₹{user.wallet || 0}</p>
+            {/* Email */}
+            <div>
+              <p className="text-xs font-medium tracking-widest uppercase mb-2 flex items-center gap-2"
+                style={{ color: "rgba(103,232,249,0.6)" }}>
+                <Mail className="w-3.5 h-3.5" /> Email
+              </p>
+              <p
+                className="px-4 py-2.5 rounded-xl text-sm text-white"
+                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(6,182,212,0.1)" }}
+              >
+                {user?.email}
+              </p>
+            </div>
           </div>
-          <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200 text-center shadow">
-            <Ticket className="mx-auto mb-2 w-5 h-5 text-emerald-600" />
-            <p className="text-sm text-emerald-600">Coupons</p>
-            <p className="text-xl font-bold text-emerald-800">{user.coupons?.length || 0}</p>
-          </div>
-          <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200 text-center shadow">
-            <Star className="mx-auto mb-2 w-5 h-5 text-emerald-600" />
-            <p className="text-sm text-emerald-600">Sakhi Points</p>
-            <p className="text-xl font-bold text-emerald-800">{user.sakhiPoints || 0}</p>
-          </div>
-        </div>
 
-        {/* Account Info */}
-        <div className="bg-emerald-50 p-6 rounded-xl border border-emerald-200 space-y-4">
-          <h2 className="text-lg font-semibold text-emerald-800">Account Information</h2>
-          <div className="flex justify-between text-sm">
-            <span className="text-emerald-600">Member Since</span>
-            <span className="text-emerald-800">{user.createdAt?.split("T")[0]}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-emerald-600">Account Status</span>
-            <span className="text-emerald-600 font-medium">Active</span>
-          </div>
-        </div>
+          {/* Edit actions */}
+          {isEditing && (
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={handleCancelEdit}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all"
+                style={{
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(148,163,184,0.2)",
+                  color: "rgba(148,163,184,0.8)",
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.08)"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.04)"}
+              >
+                <X className="w-4 h-4" /> Cancel
+              </button>
+              <button
+                onClick={handleSaveProfile}
+                disabled={isUpdatingProfile}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50"
+                style={{
+                  background: "linear-gradient(135deg, #0284c7, #06b6d4)",
+                  boxShadow: "0 0 16px rgba(6,182,212,0.3)",
+                }}
+              >
+                <Save className="w-4 h-4" />
+                {isUpdatingProfile ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          )}
 
-        {/* Logout */}
-        <div className="text-center">
-          <button
-            onClick={handleLogout}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition shadow-md"
+          {/* Stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[
+              { icon: <Wallet className="w-5 h-5" style={{ color: "#38bdf8" }} />, label: "Wallet", value: `₹${user.wallet || 0}` },
+              { icon: <Ticket className="w-5 h-5" style={{ color: "#38bdf8" }} />, label: "Coupons", value: user.coupons?.length || 0 },
+              { icon: <Star className="w-5 h-5" style={{ color: "#38bdf8" }} />, label: "AquaPoints", value: user.sakhiPoints || 0 },
+            ].map((stat, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 + i * 0.1 }}
+                className="p-5 rounded-2xl text-center transition-all duration-300"
+                style={{
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(6,182,212,0.12)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.border = "1px solid rgba(6,182,212,0.35)";
+                  e.currentTarget.style.background = "rgba(6,182,212,0.06)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.border = "1px solid rgba(6,182,212,0.12)";
+                  e.currentTarget.style.background = "rgba(255,255,255,0.03)";
+                }}
+              >
+                <div className="flex justify-center mb-2">{stat.icon}</div>
+                <p className="text-xs tracking-widest uppercase mb-1" style={{ color: "rgba(103,232,249,0.6)" }}>
+                  {stat.label}
+                </p>
+                <p className="text-2xl font-bold text-white" style={{ fontFamily: "'Syne', sans-serif" }}>
+                  {stat.value}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Account info */}
+          <div
+            className="p-6 rounded-2xl space-y-4"
+            style={{
+              background: "rgba(255,255,255,0.02)",
+              border: "1px solid rgba(6,182,212,0.1)",
+            }}
           >
-            <LogOut className="w-4 h-4" />
-            Logout
-          </button>
+            <h2 className="text-sm font-semibold tracking-widest uppercase" style={{ color: "#67e8f9" }}>
+              Account Information
+            </h2>
+            <div
+              className="h-px"
+              style={{ background: "linear-gradient(90deg, transparent, rgba(6,182,212,0.3), transparent)" }}
+            />
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-400">Member Since</span>
+              <span className="text-white">{user.createdAt?.split("T")[0]}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-400">Account Status</span>
+              <span
+                className="text-xs font-semibold px-3 py-1 rounded-full"
+                style={{
+                  background: "rgba(6,182,212,0.1)",
+                  border: "1px solid rgba(6,182,212,0.25)",
+                  color: "#67e8f9",
+                }}
+              >
+                Active
+              </span>
+            </div>
+          </div>
+
+          {/* Logout */}
+          <div className="flex justify-center pb-2">
+            <motion.button
+              onClick={handleLogout}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all"
+              style={{
+                background: "rgba(239,68,68,0.08)",
+                border: "1px solid rgba(239,68,68,0.25)",
+                color: "rgba(252,165,165,0.9)",
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = "rgba(239,68,68,0.15)"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "rgba(239,68,68,0.08)"}
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </motion.button>
+          </div>
         </div>
-      </div>
+
+        {/* Bottom accent line */}
+        <div className="h-px w-full"
+          style={{ background: "linear-gradient(90deg, transparent, rgba(6,182,212,0.3), transparent)" }} />
+      </motion.div>
+
+      {/* Syne font */}
+      <link
+        href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&display=swap"
+        rel="stylesheet"
+      />
     </div>
   );
 };

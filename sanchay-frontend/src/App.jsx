@@ -9,12 +9,15 @@ import LoadingSpinner from "./components/LoadingSpinner";
 import SignUpPage from "./pages/SignUpPage";
 import LoginPage from "./pages/LoginPage";
 import EmailVerificationPage from "./pages/EmailVerificationPage";
+import DashboardPage from "./pages/DashboardPage";
 
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import ProfilePage from "./pages/ProfilePage";
+import About from "./components/About"
 
 import { useAuthStore } from "./store/authStore";
+import Dashboard from "./pages/Dashboard";
 
 
 
@@ -23,7 +26,7 @@ const ProtectedRoute = ({ children }) => {
   const { isAuthenticated } = useAuthStore();
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/Dashboard" replace />;
   }
 
   return children;
@@ -53,9 +56,9 @@ function App() {
     <div className="min-h-screen">
       <Navbar />
       <Routes>
-        {/* Public Dashboard
-        <Route path="/" element={<DashboardPage />} /> */}
-          
+        {/* Public Dashboard */}
+        <Route path="/" element={<DashboardPage />} />
+      
        
  
         {/* Auth Pages */}
@@ -94,7 +97,7 @@ function App() {
         />
         
         
-        {/* <Route path="/About" element={<About />} /> */}
+        <Route path="/About" element={<About />} />
 
         {/* Private pages for any logged-in user */}
           <Route
@@ -102,6 +105,13 @@ function App() {
           element={
             <ProtectedRoute>
               <ProfilePage />
+            </ProtectedRoute>
+          }
+        /><Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
             </ProtectedRoute>
           }
         />
