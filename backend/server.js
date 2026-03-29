@@ -35,10 +35,10 @@ const frontendPath = path.join(__dirname, '../sanchay-frontend/dist');
 
 app.use(express.static(frontendPath));
 
-app.get('/:path(*)', (req, res) => {
+// only handle root
+app.get('/', (req, res) => {
     res.sendFile(path.join(frontendPath, 'index.html'));
 });
-
 // Start server
 app.listen(PORT, () => {
     console.log('🚀 Server running on port:', PORT);
