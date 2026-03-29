@@ -31,11 +31,10 @@ app.get("/api/test", (req, res) => {
 });
 
 // ✅ ALWAYS serve frontend
-const frontendPath = path.join(__dirname, '../sanchay-frontend/dist');
+const frontendPath = path.join(__dirname, 'sanchay-frontend/dist');
 
 app.use(express.static(frontendPath));
 
-// only handle root
 app.get('/', (req, res) => {
     res.sendFile(path.join(frontendPath, 'index.html'));
 });
