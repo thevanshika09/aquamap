@@ -11,12 +11,11 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// Fix __dirname for ES modules
 const __dirname = path.resolve();
 
-// ✅ Middleware
+// Middleware
 app.use(cors({
-    origin: true, // allow all (fix for production)
+    origin: true,
     credentials: true
 }));
 
@@ -24,26 +23,23 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cookieParser());
 
-// ✅ Routes
+// Routes
 app.use('/api/auth', authRoutes);
 
-// ✅ Test route (optional but useful)
 app.get("/api/test", (req, res) => {
     res.send("API working ✅");
 });
 
-// ✅ Serve frontend (IMPORTANT FIXED PART)
-if (process.env.NODE_ENV === 'production') {
-    const frontendPath = path.join(__dirname, '../sanchay-frontend/dist');
+// ✅ ALWAYS serve frontend
+const frontendPath = path.join(__dirname, '../sanchay-frontend/dist');
 
-    app.use(express.static(frontendPath));
+app.use(express.static(frontendPath));
 
-    app.get('*', (req, res) => {
-        res.sendFile(path.join(frontendPath, 'index.html'));
-    });
-}
+app.get('*', (req, res) => {
+    res.sendFile(path.join(frontendPath, 'index.html'));
+});
 
-// ✅ Start server
+// Start server
 app.listen(PORT, () => {
     console.log('🚀 Server running on port:', PORT);
     connectDB();
